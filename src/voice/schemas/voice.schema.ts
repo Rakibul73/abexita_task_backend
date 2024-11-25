@@ -50,3 +50,15 @@ export class Professional extends Document {
 }
 
 export const ProfessionalSchema = SchemaFactory.createForClass(Professional);
+
+// Add text indexes for efficient searching
+ProfessionalSchema.index({
+  name: 'text',
+  type: 'text',
+  category: 'text',
+  subCategory: 'text'
+});
+
+// Add separate indexes for zone and branch for regex searches
+ProfessionalSchema.index({ zone: 1 });
+ProfessionalSchema.index({ branch: 1 });
