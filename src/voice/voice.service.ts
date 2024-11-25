@@ -1,7 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, SortOrder } from 'mongoose';
 import { Professional } from './schemas/voice.schema';
+
+// Constants moved to the top level
+const SEARCH_KEYWORDS = {
+  PRACTITIONER: ['doctor', 'doc', 'practitioner', 'dr'],
+  ORGANIZATION: ['hospital', 'organization', 'hosp', 'clinic'],
+  SORT_HIGH: ['best', 'top', 'highest'],
+  SORT_LOW: ['worst', 'lowest', 'bad'],
+  PREPOSITIONS: ['in', 'at', 'on', 'to', 'for', 'with', 'by', 'from', 'of', 'near', 'around'],
+};
 
 @Injectable()
 export class VoiceService {
@@ -10,89 +19,49 @@ export class VoiceService {
     private professionalModel: Model<Professional>,
   ) {}
 
-  async searchProfessionals(query: string): Promise<Professional[]> {
+  private determineSearchType(query: string): string | null {
     const lowerQuery = query.toLowerCase();
-    // Build dynamic conditions
-    let sort: any = {};
-    let type: string;
-
-    // Detect type (doctor or hospital)
-    if (
-      lowerQuery.includes('doctor') ||
-      lowerQuery.includes('doc') ||
-      lowerQuery.includes('practitioner') ||
-      lowerQuery.includes('dr')
-    ) {
-      type = 'Practitioner';
-    } else if (
-      lowerQuery.includes('hospital') ||
-      lowerQuery.includes('organization') ||
-      lowerQuery.includes('hosp') ||
-      lowerQuery.includes('clinic')
-    ) {
-      type = 'Organization';
+    if (SEARCH_KEYWORDS.PRACTITIONER.some(keyword => lowerQuery.includes(keyword))) {
+      return 'Practitioner';
     }
-
-    // Handle sorting based on keywords
-    if (
-      lowerQuery.includes('best') ||
-      lowerQuery.includes('top') ||
-      lowerQuery.includes('highest')
-    ) {
-      sort = { rating: -1, ranking: -1 };
-    } else if (
-      lowerQuery.includes('worst') ||
-      lowerQuery.includes('lowest') ||
-      lowerQuery.includes('bad')
-    ) {
-      sort = { rating: 1, ranking: 1 };
+    if (SEARCH_KEYWORDS.ORGANIZATION.some(keyword => lowerQuery.includes(keyword))) {
+      return 'Organization';
     }
+    return null;
+  }
 
-    const typeKeywords = [
-      'doctor',
-      'doc',
-      'dr',
-      'hospital',
-      'clinic',
-      'practitioner',
-      'organization',
+  private determineSortCriteria(query: string): { [key: string]: SortOrder } {
+    const lowerQuery = query.toLowerCase();
+    if (SEARCH_KEYWORDS.SORT_HIGH.some(keyword => lowerQuery.includes(keyword))) {
+      return { rating: -1, ranking: -1 };
+    }
+    if (SEARCH_KEYWORDS.SORT_LOW.some(keyword => lowerQuery.includes(keyword))) {
+      return { rating: 1, ranking: 1 };
+    }
+    return {};
+  }
+
+  private cleanQueryText(query: string): string[] {
+    const allKeywords = [
+      ...SEARCH_KEYWORDS.PRACTITIONER,
+      ...SEARCH_KEYWORDS.ORGANIZATION,
+      ...SEARCH_KEYWORDS.SORT_HIGH,
+      ...SEARCH_KEYWORDS.SORT_LOW,
+      ...SEARCH_KEYWORDS.PREPOSITIONS,
     ];
 
-    const sortKeywords = ['best', 'worst', 'highest', 'lowest', 'top', 'bad'];
-
-    const prepositions = [
-      'in',
-      'at',
-      'on',
-      'to',
-      'for',
-      'with',
-      'by',
-      'from',
-      'of',
-      'near',
-      'around',
-    ];
-
-    // Clean the query text by removing irrelevant words (type and sort keywords)
-    const cleanQuery = lowerQuery
+    return query
+      .toLowerCase()
       .split(' ')
-      .filter(
-        (word) =>
-          ![...typeKeywords, ...sortKeywords, ...prepositions].includes(word),
-      ) // Remove type and sort-related words
-      .join(' ');
+      .filter(word => !allKeywords.includes(word))
+      .filter(word => word.length > 0);
+  }
 
-    // Split cleanQuery into individual words and filter out empty strings
-    const searchWords = cleanQuery.split(' ').filter((word) => word.length > 0);
-
-    // Combine type condition with word search conditions
-    const finalSearchConditions = {
+  private buildSearchConditions(type: string | null, searchWords: string[]): Record<string, any> {
+    const conditions = {
       $and: [
-        // Include type condition if it exists
         ...(type ? [{ type: type }] : []),
-        // Add word search conditions
-        ...searchWords.map((word) => ({
+        ...searchWords.map(word => ({
           $or: [
             { name: { $regex: word, $options: 'i' } },
             { zone: { $regex: word, $options: 'i' } },
@@ -103,16 +72,22 @@ export class VoiceService {
       ],
     };
 
-    console.log(` searchConditions: ${JSON.stringify(finalSearchConditions)}`);
-    console.log(` sort: ${JSON.stringify(sort)}`);
+    return conditions;
+  }
 
-    // Execute the query with the dynamic conditions and sorting
-    const result = await this.professionalModel
-      .find(finalSearchConditions)
+  async searchProfessionals(query: string): Promise<Professional[]> {
+    const type = this.determineSearchType(query);
+    const sort = this.determineSortCriteria(query);
+    const searchWords = this.cleanQueryText(query);
+    const searchConditions = this.buildSearchConditions(type, searchWords);
+
+    console.log(`searchConditions: ${JSON.stringify(searchConditions)}`);
+    console.log(`sort: ${JSON.stringify(sort)}`);
+
+    return this.professionalModel
+      .find(searchConditions)
       .sort(sort)
       .exec();
-
-    return result;
   }
 
   // Insert mock data into the database
