@@ -13,8 +13,8 @@ export class VoiceService {
   async searchProfessionals(query: string): Promise<Professional[]> {
     const lowerQuery = query.toLowerCase();
     // Build dynamic conditions
-    let searchConditions: any = {};
     let sort: any = {};
+    let type: string;
 
     // Detect type (doctor or hospital)
     if (
@@ -23,14 +23,14 @@ export class VoiceService {
       lowerQuery.includes('practitioner') ||
       lowerQuery.includes('dr')
     ) {
-      searchConditions.type = 'Practitioner';
+      type = 'Practitioner';
     } else if (
       lowerQuery.includes('hospital') ||
       lowerQuery.includes('organization') ||
       lowerQuery.includes('hosp') ||
       lowerQuery.includes('clinic')
     ) {
-      searchConditions.type = 'Organization';
+      type = 'Organization';
     }
 
     // Handle sorting based on keywords
@@ -86,24 +86,29 @@ export class VoiceService {
     // Split cleanQuery into individual words and filter out empty strings
     const searchWords = cleanQuery.split(' ').filter((word) => word.length > 0);
 
-    // Prepare a dynamic inclusive search for zone, branch, subCategory, name etc.
-    searchConditions = {
-      $and: searchWords.map((word) => ({
-        $or: [
-          { name: { $regex: word, $options: 'i' } },
-          { zone: { $regex: word, $options: 'i' } },
-          { branch: { $regex: word, $options: 'i' } },
-          { subCategory: { $regex: word, $options: 'i' } },
-        ],
-      })),
+    // Combine type condition with word search conditions
+    const finalSearchConditions = {
+      $and: [
+        // Include type condition if it exists
+        ...(type ? [{ type: type }] : []),
+        // Add word search conditions
+        ...searchWords.map((word) => ({
+          $or: [
+            { name: { $regex: word, $options: 'i' } },
+            { zone: { $regex: word, $options: 'i' } },
+            { branch: { $regex: word, $options: 'i' } },
+            { subCategory: { $regex: word, $options: 'i' } },
+          ],
+        })),
+      ],
     };
 
-    console.log(` searchConditions: ${JSON.stringify(searchConditions)}`);
+    console.log(` searchConditions: ${JSON.stringify(finalSearchConditions)}`);
     console.log(` sort: ${JSON.stringify(sort)}`);
 
     // Execute the query with the dynamic conditions and sorting
     const result = await this.professionalModel
-      .find(searchConditions)
+      .find(finalSearchConditions)
       .sort(sort)
       .exec();
 
