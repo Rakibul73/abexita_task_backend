@@ -9,6 +9,20 @@ const SEARCH_KEYWORDS = {
   SORT_HIGH: ['best', 'top', 'highest'],
   SORT_LOW: ['worst', 'lowest', 'bad'],
   PREPOSITIONS: ['in', 'at', 'on', 'to', 'for', 'with', 'by', 'from', 'of', 'near', 'around'],
+  STOP_WORDS: [
+    'a', 'an', 'the', 
+    'me', 'my', 'mine', 'i',
+    'give', 'show', 'find', 'get', 'tell',
+    'want', 'need', 'looking',
+    'can', 'could', 'would', 'should',
+    'please', 'thanks', 'thank',
+    'this', 'that', 'these', 'those',
+    'who', 'what', 'where', 'when', 'how',
+    'and', 'or', 'but', 'so', 'because',
+    'any', 'some', 'few', 'many',
+    'here', 'there'
+  ],
+  QUERY_STARTERS: ['find', 'search', 'locate', 'look', 'show']
 };
 
 @Injectable()
@@ -47,6 +61,8 @@ export class AssistantService {
       ...SEARCH_KEYWORDS.SORT_HIGH,
       ...SEARCH_KEYWORDS.SORT_LOW,
       ...SEARCH_KEYWORDS.PREPOSITIONS,
+      ...SEARCH_KEYWORDS.QUERY_STARTERS,
+      ...SEARCH_KEYWORDS.STOP_WORDS,
     ];
 
     return query
