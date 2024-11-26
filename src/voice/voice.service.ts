@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, SortOrder } from 'mongoose';
 import { Professional } from './schemas/voice.schema';
 
-// Constants moved to the top level
 const SEARCH_KEYWORDS = {
   PRACTITIONER: ['doctor', 'doc', 'practitioner', 'dr'],
   ORGANIZATION: ['hospital', 'organization', 'hosp', 'clinic'],
@@ -52,6 +51,7 @@ export class VoiceService {
 
     return query
       .toLowerCase()
+      .replace(/[.,?]/g, '') // Remove periods, commas, and question marks
       .split(' ')
       .filter(word => !allKeywords.includes(word))
       .filter(word => word.length > 0);
@@ -90,7 +90,6 @@ export class VoiceService {
       .exec();
   }
 
-  // Insert mock data into the database
   async insertMockData(mockData: Professional[]): Promise<Professional[]> {
     return this.professionalModel.insertMany(mockData);
   }

@@ -4,13 +4,20 @@ import {
   Body,
   HttpStatus,
   HttpException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VoiceService } from './voice.service';
 import { Professional } from './schemas/voice.schema';
+import { SpeechService } from 'src/speech/speech.service';
 
 @Controller('voice')
 export class VoiceController {
-  constructor(private readonly voiceService: VoiceService) {}
+  constructor(
+    private readonly voiceService: VoiceService,
+    private readonly speechService: SpeechService,
+  ) {}
 
   @Post('search')
   async search(@Body('query') query: string) {
@@ -65,6 +72,47 @@ export class VoiceController {
         {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'An error occurred while inserting mock data',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('audio'))
+  async uploadAudio(@UploadedFile() file: Express.Multer.File) {
+    try {
+      if (!file) {
+        throw new HttpException(
+          'Audio file is required',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      console.log(file.buffer);
+      const transcribedText = await this.speechService.processAudio(
+        file.buffer,
+        file.mimetype,
+      );
+
+      console.log(transcribedText);
+
+      const results =
+        await this.voiceService.searchProfessionals(transcribedText);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Search completed successfully',
+        data: results,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'An error occurred while processing the audio file',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
