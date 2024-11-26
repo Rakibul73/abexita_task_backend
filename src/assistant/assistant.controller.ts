@@ -8,14 +8,14 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { VoiceService } from './voice.service';
+import { AssistantService } from './assistant.service';
 import { Professional } from './schemas/voice.schema';
 import { SpeechService } from 'src/speech/speech.service';
 
-@Controller('voice')
-export class VoiceController {
+@Controller('assistant')
+export class AssistantController {
   constructor(
-    private readonly voiceService: VoiceService,
+    private readonly assistantService: AssistantService,
     private readonly speechService: SpeechService,
   ) {}
 
@@ -28,7 +28,7 @@ export class VoiceController {
           HttpStatus.BAD_REQUEST,
         );
       }
-      const results = await this.voiceService.searchProfessionals(query);
+      const results = await this.assistantService.searchProfessionals(query);
       return {
         statusCode: HttpStatus.OK,
         message: 'Search completed successfully',
@@ -58,7 +58,7 @@ export class VoiceController {
           HttpStatus.BAD_REQUEST,
         );
       }
-      const result = await this.voiceService.insertMockData(mockData);
+      const result = await this.assistantService.insertMockData(mockData);
       return {
         statusCode: HttpStatus.CREATED,
         message: 'Mock data inserted successfully',
@@ -99,7 +99,7 @@ export class VoiceController {
       console.log(transcribedText);
 
       const results =
-        await this.voiceService.searchProfessionals(transcribedText);
+        await this.assistantService.searchProfessionals(transcribedText);
       return {
         statusCode: HttpStatus.OK,
         message: 'Search completed successfully',

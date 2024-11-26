@@ -12,7 +12,7 @@ const SEARCH_KEYWORDS = {
 };
 
 @Injectable()
-export class VoiceService {
+export class AssistantService {
   constructor(
     @InjectModel(Professional.name)
     private professionalModel: Model<Professional>,

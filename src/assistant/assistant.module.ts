@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Professional, ProfessionalSchema } from './schemas/voice.schema';
-import { VoiceController } from './voice.controller';
-import { VoiceService } from './voice.service';
+import { AssistantController } from './assistant.controller';
+import { AssistantService } from './assistant.service';
 import { SpeechModule } from 'src/speech/speech.module';
 
 @Module({
@@ -12,8 +12,8 @@ import { SpeechModule } from 'src/speech/speech.module';
       { name: Professional.name, schema: ProfessionalSchema },
     ]),
   ],
-  controllers: [VoiceController],
-  providers: [VoiceService],
+  controllers: [AssistantController],
+  providers: [AssistantService],
   exports: [],
 })
-export class VoiceModule {}
+export class AssistantModule {}
